@@ -34,8 +34,11 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 
 ## Utilisation
 
-- **Notification** : écris le titre et le message. Mets `{n}` pour afficher le numéro de la notification : « Commande n°100{n} » donne 1001, 1002, 1003… L'aperçu montre le rendu.
-- **Son** : toutes les notifications jouent le son « cha-ching ». Le bouton **Écouter le son** permet de l'entendre. En mode silencieux, l'iPhone ne joue pas de son.
+- **Notification** : écris le titre et le message (par défaut « Commande #{n} » et « 50,00 €, 1 article de Boutique en ligne • Tarilo »). `{n}` est remplacé par le numéro de commande. L'aperçu montre le rendu.
+- **Numéros de commande** : choisis la tranche (**De** / **À**). Chaque notification reçoit un numéro au hasard dans cette tranche, en ordre croissant comme de vraies commandes (par exemple #1012, #1047, #1083).
+- **Son** : toutes les notifications font « cha-ching ». Le bouton **Écouter le son** permet de l'entendre.
+  - **Intervalle de moins d'une minute** : iOS ne joue qu'un son de notification à la fois et saute les autres. C'est donc l'app qui joue le son : chaque notification a son « cha-ching », qui coupe le précédent. Laisse l'app ouverte en arrière-plan pendant la série (ne la ferme pas depuis le sélecteur d'apps). Ce son suit le volume des médias et joue même en mode silencieux. Si tu fermes l'app, iOS reprend la main avec son propre son.
+  - **Intervalle d'une minute ou plus** : c'est le son de notification normal d'iOS (volume de la sonnerie, muet en mode silencieux).
 - **Nombre de notifications** : boutons − / + (de 1 à 64, la limite d'iOS).
 - **Intervalle** : boutons − / + pour la valeur, et **Secondes / Minutes / Heures** pour l'unité.
 - **Lancer** : la première notification arrive après un intervalle, puis une autre à chaque intervalle. Exemple : 3 notifications toutes les 10 secondes arrivent après 10 s, 20 s et 30 s.
@@ -52,9 +55,12 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 | Fichier | Rôle |
 | --- | --- |
 | [`NotifApp/ContentView.swift`](NotifApp/ContentView.swift) | L'écran : texte et aperçu de la notification, nombre, intervalle, boutons Lancer et Tout arrêter |
-| [`NotifApp/NotificationScheduler.swift`](NotifApp/NotificationScheduler.swift) | Programme et annule les notifications, et remplace `{n}` par leur numéro |
+| [`NotifApp/NotificationScheduler.swift`](NotifApp/NotificationScheduler.swift) | Programme et annule les notifications, tire les numéros de commande et remplace `{n}` |
+| [`NotifApp/SoundPlayer.swift`](NotifApp/SoundPlayer.swift) | Joue « cha-ching » depuis l'app pour les séries rapprochées |
 | [`NotifApp/IntervalUnit.swift`](NotifApp/IntervalUnit.swift) | Unités d'intervalle (secondes, minutes, heures) et textes associés |
 | `NotifApp/cha_ching.caf` | Son des notifications. Pour en changer, remplace-le par un autre son `.caf` de moins de 30 secondes, avec le même nom |
+| `NotifApp/silence.wav` | Piste muette qui garde l'app active en arrière-plan pendant une série rapprochée |
+| [`NotifApp/Info.plist`](NotifApp/Info.plist) | Autorise l'audio en arrière-plan (les autres réglages sont générés par Xcode) |
 | [`NotifApp/NotifAppApp.swift`](NotifApp/NotifAppApp.swift) | Point d'entrée de l'app ; affiche les notifications même quand l'app est ouverte |
 
 Ce sont des notifications **locales** (`UNUserNotificationCenter`) : pas besoin de serveur ni de certificat push.

@@ -2,20 +2,30 @@ import SwiftUI
 
 @MainActor
 struct ContentView: View {
-    private enum Field { case title, message }
+    private enum Field { case title, message, orderFrom, orderTo }
 
     @Environment(\.openURL) private var openURL
     @AppStorage("count") private var count = 3
     @AppStorage("intervalValue") private var intervalValue = 10
     @AppStorage("intervalUnit") private var unit = IntervalUnit.seconds
-    @AppStorage("notificationTitle") private var notificationTitle = "Notification {n}"
-    @AppStorage("notificationMessage") private var notificationMessage = "Personnalise ce texte dans l'app ✏️"
+    @AppStorage("orderTitle") private var notificationTitle = "Commande #{n}"
+    @AppStorage("orderMessage") private var notificationMessage = "50,00 €, 1 article de Boutique en ligne • Tarilo"
+    @AppStorage("orderFrom") private var orderFrom = "1000"
+    @AppStorage("orderTo") private var orderTo = "1099"
     @FocusState private var focusedField: Field?
     @State private var scheduledDates: [Date] = []
     @State private var isScheduling = false
     @State private var notificationsDenied = false
 
     private var intervalSeconds: Int { intervalValue * unit.seconds }
+
+    /// Tranche des numéros de commande ; un champ vide ou invalide prend une valeur par défaut.
+    private var orderRange: ClosedRange<Int> {
+        let clamp = { (value: Int) in min(max(value, 0), 999_999_999) }
+        let from = clamp(Int(orderFrom) ?? 1000)
+        let to = clamp(Int(orderTo) ?? from)
+        return min(from, to)...max(from, to)
+    }
 
     var body: some View {
         NavigationStack {
@@ -43,7 +53,11 @@ struct ContentView: View {
                 }
 
                 Section {
-                    let preview = NotificationScheduler.fill(title: notificationTitle, message: notificationMessage, number: 1)
+                    let preview = NotificationScheduler.fill(
+                        title: notificationTitle,
+                        message: notificationMessage,
+                        number: orderRange.lowerBound
+                    )
                     NotificationPreview(title: preview.title, message: preview.body)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Titre")
@@ -60,13 +74,34 @@ struct ContentView: View {
                             .lineLimit(1...5)
                             .focused($focusedField, equals: .message)
                     }
-                    Button(action: NotificationScheduler.playSound) {
+                    Button {
+                        SoundPlayer.shared.preview()
+                    } label: {
                         Label("Écouter le son", systemImage: "speaker.wave.2.fill")
                     }
                 } header: {
                     Text("Notification")
                 } footer: {
-                    Text("Écris {n} pour afficher le numéro de la notification (1, 2, 3…).")
+                    Text("{n} est remplacé par le numéro de commande.")
+                }
+
+                Section {
+                    LabeledContent("De") {
+                        TextField("1000", text: $orderFrom)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .orderFrom)
+                    }
+                    LabeledContent("À") {
+                        TextField("1099", text: $orderTo)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .orderTo)
+                    }
+                } header: {
+                    Text("Numéros de commande")
+                } footer: {
+                    Text("Chaque notification reçoit un numéro au hasard dans cette tranche, en ordre croissant.")
                 }
 
                 Section {
@@ -135,15 +170,24 @@ struct ContentView: View {
 
     private var summary: String {
         let first = shortDuration(intervalSeconds)
-        if count == 1 {
-            return "Ta notification arrivera dans \(first)."
+        var text = count == 1
+            ? "Ta notification arrivera dans \(first)."
+            : "La première arrivera dans \(first), la dernière dans \(shortDuration(intervalSeconds * count))."
+        if TimeInterval(intervalSeconds) < NotificationScheduler.appSoundMaxInterval {
+            text += " Laisse l'app ouverte en arrière-plan pour que chaque notification sonne."
         }
-        return "La première arrivera dans \(first), la dernière dans \(shortDuration(intervalSeconds * count))."
+        return text
     }
 
     private func loadState() async {
         notificationsDenied = await NotificationScheduler.isDenied()
-        scheduledDates = await NotificationScheduler.pendingDates()
+        let pending = await NotificationScheduler.pending()
+        scheduledDates = pending.map(\.date)
+        // App relancée pendant une série rapprochée : elle reprend le son.
+        let appSoundDates = pending.filter(\.appPlaysSound).map(\.date)
+        if !appSoundDates.isEmpty {
+            SoundPlayer.shared.play(at: appSoundDates)
+        }
     }
 
     /// Retire de « En cours » les notifications déjà arrivées, au moment où elles arrivent.
@@ -163,17 +207,25 @@ struct ContentView: View {
             let granted = await NotificationScheduler.requestAuthorization()
             notificationsDenied = !granted
             guard granted else { return }
-            scheduledDates = await NotificationScheduler.schedule(
-                count: count,
-                every: TimeInterval(intervalSeconds),
+            let interval = TimeInterval(intervalSeconds)
+            let dates = await NotificationScheduler.schedule(
+                numbers: NotificationScheduler.orderNumbers(count: count, in: orderRange),
+                every: interval,
                 title: notificationTitle,
                 message: notificationMessage
             )
+            scheduledDates = dates
+            if interval < NotificationScheduler.appSoundMaxInterval {
+                SoundPlayer.shared.play(at: dates)
+            } else {
+                SoundPlayer.shared.stop()
+            }
         }
     }
 
     private func stop() {
         NotificationScheduler.cancelAll()
+        SoundPlayer.shared.stop()
         scheduledDates = []
     }
 }
