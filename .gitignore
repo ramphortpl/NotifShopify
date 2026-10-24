@@ -1,0 +1,11 @@
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
+# Sorties de compilation
+Payload/
+*.ipa
+
+.DS_Store

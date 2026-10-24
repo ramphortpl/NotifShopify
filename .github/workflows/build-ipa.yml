@@ -1,0 +1,64 @@
+name: Build IPA
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compiler NotifApp.ipa
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version de Xcode
+        run: xcodebuild -version
+
+      # Pas de signature ici : le .ipa est signé au moment de l'installation (Sideloadly, AltStore...).
+      - name: Compiler l'app
+        run: |
+          xcodebuild build \
+            -project NotifApp.xcodeproj \
+            -target NotifApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -quiet \
+            SYMROOT="$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Créer NotifApp.ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Release-iphoneos/NotifApp.app Payload/
+          plutil -p Payload/NotifApp.app/Info.plist
+          zip -qry NotifApp.ipa Payload
+          ls -lh NotifApp.ipa
+
+      - name: Envoyer le .ipa comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotifApp-ipa
+          path: NotifApp.ipa
+          if-no-files-found: error
+
+      - name: Publier le .ipa dans les Releases
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest NotifApp.ipa \
+            --target "$GITHUB_SHA" \
+            --title "NotifApp (dernière version)" \
+            --notes "Compilé automatiquement depuis le commit $GITHUB_SHA. Le .ipa n'est pas signé : installe-le avec Sideloadly, AltStore ou SideStore (voir le README)."
