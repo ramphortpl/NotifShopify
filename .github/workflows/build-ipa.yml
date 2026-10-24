@@ -62,3 +62,44 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "NotifApp (dernière version)" \
             --notes "Compilé automatiquement depuis le commit $GITHUB_SHA. Le .ipa n'est pas signé : installe-le avec Sideloadly, AltStore ou SideStore (voir le README)."
+
+  # Vérifie que l'app démarre et enregistre une capture d'écran (artefact « apercu »).
+  apercu:
+    name: Aperçu dans le simulateur
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Démarrer un simulateur iPhone
+        run: |
+          UDID=$(xcrun simctl list devices available | grep -m1 -E '^ +iPhone' | grep -oE '[0-9A-F-]{36}')
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+
+      - name: Compiler pour le simulateur
+        run: |
+          xcodebuild build \
+            -project NotifApp.xcodeproj \
+            -target NotifApp \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -quiet \
+            ARCHS=arm64 \
+            SYMROOT="$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Lancer l'app et faire une capture d'écran
+        run: |
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$UDID" build/Release-iphonesimulator/NotifApp.app
+          xcrun simctl launch "$UDID" com.ramphortpl.notifapp
+          sleep 8
+          pgrep -fl "NotifApp.app/NotifApp" || { echo "::error::L'app s'est arrêtée juste après son lancement"; exit 1; }
+          xcrun simctl io "$UDID" screenshot apercu.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apercu
+          path: apercu.png
+          if-no-files-found: error
