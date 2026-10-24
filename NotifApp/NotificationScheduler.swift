@@ -1,9 +1,12 @@
+import AudioToolbox
 import Foundation
 import UserNotifications
 
 /// Programme et annule les séries de notifications locales.
 enum NotificationScheduler {
     private static let dateKey = "date"
+    /// Son de toutes les notifications : fichier du bundle, moins de 30 s (sinon iOS joue le son par défaut).
+    private static let soundFile = "cha_ching.caf"
 
     private static var center: UNUserNotificationCenter { .current() }
 
@@ -44,7 +47,7 @@ enum NotificationScheduler {
             let content = UNMutableNotificationContent()
             content.title = text.title
             content.body = text.body
-            content.sound = .default
+            content.sound = UNNotificationSound(named: UNNotificationSoundName(soundFile))
             content.threadIdentifier = "serie"
             content.userInfo = [dateKey: date.timeIntervalSince1970]
 
@@ -58,6 +61,17 @@ enum NotificationScheduler {
 
     static func cancelAll() {
         center.removeAllPendingNotificationRequests()
+    }
+
+    /// Joue le son des notifications dans l'app (muet si l'iPhone est en mode silencieux).
+    static func playSound() {
+        guard let url = Bundle.main.url(forResource: soundFile, withExtension: nil) else { return }
+        var soundID: SystemSoundID = 0
+        guard AudioServicesCreateSystemSoundID(url as CFURL, &soundID) == kAudioServicesNoError else { return }
+        let id = soundID
+        AudioServicesPlaySystemSoundWithCompletion(id) {
+            AudioServicesDisposeSystemSoundID(id)
+        }
     }
 
     /// Dates des notifications encore à venir, pour retrouver la série quand l'app est rouverte.

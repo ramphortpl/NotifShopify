@@ -60,6 +60,9 @@ struct ContentView: View {
                             .lineLimit(1...5)
                             .focused($focusedField, equals: .message)
                     }
+                    Button(action: NotificationScheduler.playSound) {
+                        Label("Écouter le son", systemImage: "speaker.wave.2.fill")
+                    }
                 } header: {
                     Text("Notification")
                 } footer: {
