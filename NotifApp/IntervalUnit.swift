@@ -34,11 +34,6 @@ enum IntervalUnit: String, CaseIterable, Identifiable {
         }
     }
 
-    /// « 1 minute », « 10 secondes »
-    func quantity(_ value: Int) -> String {
-        value == 1 ? "1 \(singular)" : "\(value) \(singular)s"
-    }
-
     /// « Toutes les minutes », « Toutes les 10 secondes »
     func every(_ value: Int) -> String {
         value == 1 ? "Toutes les \(singular)s" : "Toutes les \(value) \(singular)s"

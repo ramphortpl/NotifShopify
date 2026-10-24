@@ -1,6 +1,6 @@
 # Notif 🔔
 
-Petite app iPhone (SwiftUI) : tu choisis combien de notifications tu veux recevoir et à quel intervalle, tu appuies sur **Lancer**, et ton iPhone les reçoit.
+Petite app iPhone (SwiftUI) : tu écris le texte de tes notifications, tu choisis combien tu veux en recevoir et à quel intervalle, tu appuies sur **Lancer**, et ton iPhone les reçoit.
 
 <p align="center"><img src="NotifApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="Icône de l'app"></p>
 
@@ -22,7 +22,7 @@ Le .ipa est compilé automatiquement sur un Mac de GitHub à chaque push (voir [
 3. Glisse `NotifApp.ipa` dans Sideloadly, entre ton identifiant Apple, puis clique sur **Start**.
 4. Sur l'iPhone : **Réglages → Confidentialité et sécurité → Mode développeur** → active-le (l'iPhone redémarre).
 5. **Réglages → Général → VPN et gestion de l'appareil** → touche ton identifiant Apple → **Faire confiance**.
-6. Ouvre l'app **Notif**, choisis le nombre et l'intervalle, appuie sur **Lancer** et autorise les notifications 🎉
+6. Ouvre l'app **Notif**, écris ton texte, choisis le nombre et l'intervalle, appuie sur **Lancer** et autorise les notifications 🎉
 
 Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suffit de la réinstaller avec Sideloadly (tes réglages restent).
 
@@ -34,6 +34,7 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 
 ## Utilisation
 
+- **Notification** : écris le titre et le message. Mets `{n}` pour afficher le numéro de la notification : « Commande n°100{n} » donne 1001, 1002, 1003… L'aperçu montre le rendu.
 - **Nombre de notifications** : boutons − / + (de 1 à 64, la limite d'iOS).
 - **Intervalle** : boutons − / + pour la valeur, et **Secondes / Minutes / Heures** pour l'unité.
 - **Lancer** : la première notification arrive après un intervalle, puis une autre à chaque intervalle. Exemple : 3 notifications toutes les 10 secondes arrivent après 10 s, 20 s et 30 s.
@@ -49,8 +50,8 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 
 | Fichier | Rôle |
 | --- | --- |
-| [`NotifApp/ContentView.swift`](NotifApp/ContentView.swift) | L'écran : choix du nombre et de l'intervalle, boutons Lancer et Tout arrêter |
-| [`NotifApp/NotificationScheduler.swift`](NotifApp/NotificationScheduler.swift) | Programme et annule les notifications |
+| [`NotifApp/ContentView.swift`](NotifApp/ContentView.swift) | L'écran : texte et aperçu de la notification, nombre, intervalle, boutons Lancer et Tout arrêter |
+| [`NotifApp/NotificationScheduler.swift`](NotifApp/NotificationScheduler.swift) | Programme et annule les notifications, et remplace `{n}` par leur numéro |
 | [`NotifApp/IntervalUnit.swift`](NotifApp/IntervalUnit.swift) | Unités d'intervalle (secondes, minutes, heures) et textes associés |
 | [`NotifApp/NotifAppApp.swift`](NotifApp/NotifAppApp.swift) | Point d'entrée de l'app ; affiche les notifications même quand l'app est ouverte |
 

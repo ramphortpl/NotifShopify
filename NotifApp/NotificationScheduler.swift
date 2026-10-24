@@ -17,9 +17,20 @@ enum NotificationScheduler {
         (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// Remplace {n} par le numéro de la notification. Si le titre et le message sont vides,
+    /// met un titre par défaut : une notification sans texte ne s'afficherait pas.
+    static func fill(title: String, message: String, number: Int) -> (title: String, body: String) {
+        let filledTitle = title.replacingOccurrences(of: "{n}", with: "\(number)")
+        let filledBody = message.replacingOccurrences(of: "{n}", with: "\(number)")
+        if (filledTitle + filledBody).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return ("Notification \(number)", "")
+        }
+        return (filledTitle, filledBody)
+    }
+
     /// Remplace la série en cours par `count` notifications espacées de `interval` secondes,
     /// la première arrivant après un intervalle. Renvoie les dates d'arrivée prévues.
-    static func schedule(count: Int, every interval: TimeInterval, intervalText: String) async -> [Date] {
+    static func schedule(count: Int, every interval: TimeInterval, title: String, message: String) async -> [Date] {
         center.removeAllPendingNotificationRequests()
         guard count > 0 else { return [] }
 
@@ -28,10 +39,11 @@ enum NotificationScheduler {
         for index in 1...count {
             let delay = interval * Double(index)
             let date = start.addingTimeInterval(delay)
+            let text = fill(title: title, message: message, number: index)
 
             let content = UNMutableNotificationContent()
-            content.title = "Notification \(index) sur \(count)"
-            content.body = index == count ? "C'était la dernière ! 🎉" : "Prochaine dans \(intervalText)."
+            content.title = text.title
+            content.body = text.body
             content.sound = .default
             content.threadIdentifier = "serie"
             content.userInfo = [dateKey: date.timeIntervalSince1970]
