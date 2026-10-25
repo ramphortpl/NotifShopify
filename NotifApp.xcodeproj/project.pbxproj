@@ -13,6 +13,8 @@
 		1A0000000000000000000004 /* IntervalUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0000000000000000000005 /* IntervalUnit.swift */; };
 		1A0000000000000000000005 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0000000000000000000006 /* NotificationScheduler.swift */; };
 		1A0000000000000000000006 /* cha_ching.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1B0000000000000000000007 /* cha_ching.caf */; };
+		1A000000000000000000000C /* cha_ching_rapide.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1B000000000000000000000F /* cha_ching_rapide.caf */; };
+		1A000000000000000000000D /* cha_ching_turbo.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1B0000000000000000000010 /* cha_ching_turbo.caf */; };
 		1A000000000000000000000A /* SeriesRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B000000000000000000000C /* SeriesRunner.swift */; };
 		1A000000000000000000000B /* silence.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1B000000000000000000000D /* silence.wav */; };
 /* End PBXBuildFile section */
@@ -25,6 +27,8 @@
 		1B0000000000000000000005 /* IntervalUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalUnit.swift; sourceTree = "<group>"; };
 		1B0000000000000000000006 /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
 		1B0000000000000000000007 /* cha_ching.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = cha_ching.caf; sourceTree = "<group>"; };
+		1B000000000000000000000F /* cha_ching_rapide.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = cha_ching_rapide.caf; sourceTree = "<group>"; };
+		1B0000000000000000000010 /* cha_ching_turbo.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = cha_ching_turbo.caf; sourceTree = "<group>"; };
 		1B000000000000000000000C /* SeriesRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRunner.swift; sourceTree = "<group>"; };
 		1B000000000000000000000D /* silence.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = silence.wav; sourceTree = "<group>"; };
 		1B000000000000000000000E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -59,6 +63,8 @@
 				1B000000000000000000000C /* SeriesRunner.swift */,
 				1B0000000000000000000003 /* Assets.xcassets */,
 				1B0000000000000000000007 /* cha_ching.caf */,
+				1B000000000000000000000F /* cha_ching_rapide.caf */,
+				1B0000000000000000000010 /* cha_ching_turbo.caf */,
 				1B000000000000000000000D /* silence.wav */,
 				1B000000000000000000000E /* Info.plist */,
 			);
@@ -133,6 +139,8 @@
 			files = (
 				1A0000000000000000000003 /* Assets.xcassets in Resources */,
 				1A0000000000000000000006 /* cha_ching.caf in Resources */,
+				1A000000000000000000000C /* cha_ching_rapide.caf in Resources */,
+				1A000000000000000000000D /* cha_ching_turbo.caf in Resources */,
 				1A000000000000000000000B /* silence.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -202,7 +210,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotifApp/Info.plist;
@@ -216,7 +224,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.9;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ramphortpl.notifapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -231,7 +239,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotifApp/Info.plist;
@@ -245,7 +253,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.9;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ramphortpl.notifapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

@@ -7,7 +7,7 @@ struct ContentView: View {
     @Environment(\.openURL) private var openURL
     @AppStorage("count") private var count = 3
     @AppStorage("speed") private var speed = Speed.normal
-    /// En Rapide et Turbo : l'app joue un « cha-ching » par notification (voir `SeriesRunner`).
+    /// En Rapide et Turbo : « cha-ching » raccourci pour que chaque notification ait le sien.
     @AppStorage("soundForEach") private var soundForEach = true
     @AppStorage("intervalValue") private var intervalValue = 10
     @AppStorage("intervalUnit") private var unit = IntervalUnit.seconds
@@ -30,6 +30,11 @@ struct ContentView: View {
     /// Secondes entre deux notifications.
     private var interval: TimeInterval {
         speed.fixedInterval ?? TimeInterval(clampedIntervalValue * unit.seconds)
+    }
+
+    /// Son joué par iOS à chaque notification de la série.
+    private var soundFile: String {
+        (soundForEach ? speed.shortSoundFile : nil) ?? NotificationScheduler.fullSoundFile
     }
 
     /// Tranche des numéros de commande ; un champ vide ou invalide prend une valeur par défaut.
@@ -88,7 +93,7 @@ struct ContentView: View {
                             .focused($focusedField, equals: .message)
                     }
                     Button {
-                        NotificationScheduler.playSound()
+                        NotificationScheduler.playSound(soundFile)
                     } label: {
                         Label("Écouter le son", systemImage: "speaker.wave.2.fill")
                     }
@@ -245,11 +250,11 @@ struct ContentView: View {
             ? "Ta notification arrivera dans \(shortDuration(interval))."
             : "La première arrivera dans \(shortDuration(interval)), la dernière dans \(shortDuration(interval * Double(count)))."
         if speed != .normal && soundForEach {
-            text += " iOS ne jouerait qu'un son à la fois : c'est donc l'app qui joue le « cha-ching » de chaque"
-                + " notification, et les sons se superposent. Ce son suit le volume des médias et sonne même en"
-                + " mode silencieux. Laisse l'app en arrière-plan pendant la série."
+            let length = speed == .turbo ? "0,4 s" : "0,8 s"
+            text += " iOS ne joue qu'un son de notification à la fois : pour que chaque notification ait le sien,"
+                + " le « cha-ching » est raccourci à \(length), pour finir avant la suivante."
         } else if speed != .normal {
-            text += " C'est plus rapide que le « cha-ching » (1,4 s) : iOS ne joue qu'un son à la fois,"
+            text += " Son complet (1,4 s), plus long que l'intervalle : iOS ne joue qu'un son à la fois,"
                 + " donc certaines notifications n'auront pas de son."
         } else if unit == .seconds && clampedIntervalValue == unit.range.lowerBound {
             text += " \(unit.range.lowerBound) s minimum en vitesse normale : le « cha-ching » dure 1,4 s"
@@ -294,7 +299,7 @@ struct ContentView: View {
                 numbers: NotificationScheduler.orderNumbers(count: count, in: orderRange),
                 title: notificationTitle,
                 message: notificationMessage,
-                appPlaysSound: speed != .normal && soundForEach
+                soundFile: soundFile
             )
             SeriesRunner.shared.start(series)
             scheduledDates = series.remainingDates()

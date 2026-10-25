@@ -12,9 +12,8 @@ struct Series: Codable {
     var numbers: [Int]
     var title: String
     var message: String
-    /// Les notifications partent sans son et c'est l'app qui joue chaque « cha-ching »
-    /// (voir `SeriesRunner`) : à grande vitesse, iOS en sauterait.
-    var appPlaysSound: Bool
+    /// Son joué par iOS à chaque notification (fichier du bundle).
+    var soundFile: String
 
     /// Arrivée de la notification `index` (la première arrive après un intervalle).
     func date(at index: Int) -> Date {
@@ -34,10 +33,9 @@ enum NotificationScheduler {
     static let maxPending = 64
     static let maxCount = 999
 
-    /// Son des notifications : fichier du bundle, moins de 30 s (1,4 s ici).
-    static let soundFile = "cha_ching.caf"
+    /// Son complet des notifications : fichier du bundle, moins de 30 s (1,4 s ici).
+    static let fullSoundFile = "cha_ching.caf"
     private static let seriesKey = "series"
-    private static let dateKey = "date"
 
     private static var center: UNUserNotificationCenter { .current() }
 
@@ -96,7 +94,7 @@ enum NotificationScheduler {
     static func refill(_ series: Series) async -> Bool {
         let pending = Set(await center.pendingNotificationRequests().map(\.identifier))
         var free = maxPending - pending.count
-        let sound = UNNotificationSound(named: UNNotificationSoundName(soundFile))
+        let sound = UNNotificationSound(named: UNNotificationSoundName(series.soundFile))
         for index in series.numbers.indices {
             let identifier = "serie-\(series.id.uuidString)-\(index + 1)"
             // Déjà passée ou trop proche pour qu'iOS la livre à l'heure.
@@ -108,9 +106,8 @@ enum NotificationScheduler {
             let content = UNMutableNotificationContent()
             content.title = text.title
             content.body = text.body
-            content.sound = series.appPlaysSound ? nil : sound
+            content.sound = sound
             content.threadIdentifier = "serie"
-            content.userInfo = [dateKey: series.date(at: index).timeIntervalSince1970]
 
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
             try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
@@ -119,61 +116,20 @@ enum NotificationScheduler {
         return true
     }
 
-    /// L'app va être fermée : les notifications à venir reprennent le son d'iOS, puisque l'app ne sera
-    /// plus là pour le jouer. Bloque au plus 3 secondes, le temps qu'iOS enregistre les changements.
-    static func handOverSoundToSystem() {
-        if var series = savedSeries {
-            series.appPlaysSound = false
-            savedSeries = series
-        }
-        let fetched = DispatchSemaphore(value: 0)
-        let pending = Box<[UNNotificationRequest]>([])
-        center.getPendingNotificationRequests { requests in
-            pending.value = requests
-            fetched.signal()
-        }
-        guard fetched.wait(timeout: .now() + 1) == .success else { return }
-
-        let added = DispatchGroup()
-        let sound = UNNotificationSound(named: UNNotificationSoundName(soundFile))
-        for request in pending.value where request.content.sound == nil {
-            guard let timestamp = request.content.userInfo[dateKey] as? TimeInterval,
-                  let content = request.content.mutableCopy() as? UNMutableNotificationContent else { continue }
-            let delay = Date(timeIntervalSince1970: timestamp).timeIntervalSinceNow
-            guard delay > 0.5 else { continue }
-            content.sound = sound
-            added.enter()
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
-            center.add(UNNotificationRequest(identifier: request.identifier, content: content, trigger: trigger)) { _ in
-                added.leave()
-            }
-        }
-        _ = added.wait(timeout: .now() + 2)
-    }
-
     /// Annule la série : les notifications pas encore arrivées ne partiront pas.
     static func cancel() {
         center.removeAllPendingNotificationRequests()
         savedSeries = nil
     }
 
-    /// Joue dans l'app le son des notifications (muet si l'iPhone est en mode silencieux).
-    static func playSound() {
-        guard let url = Bundle.main.url(forResource: soundFile, withExtension: nil) else { return }
+    /// Joue dans l'app un son des notifications, pour l'écouter (muet si l'iPhone est en mode silencieux).
+    static func playSound(_ file: String) {
+        guard let url = Bundle.main.url(forResource: file, withExtension: nil) else { return }
         var soundID: SystemSoundID = 0
         guard AudioServicesCreateSystemSoundID(url as CFURL, &soundID) == kAudioServicesNoError else { return }
         let id = soundID
         AudioServicesPlaySystemSoundWithCompletion(id) {
             AudioServicesDisposeSystemSoundID(id)
         }
-    }
-}
-
-/// Récupère le résultat d'un callback pour l'attendre de façon synchrone.
-private final class Box<Value> {
-    var value: Value
-
-    init(_ value: Value) {
-        self.value = value
     }
 }

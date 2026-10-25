@@ -22,6 +22,18 @@ enum Speed: String, CaseIterable, Identifiable {
         case .turbo: return 0.5
         }
     }
+
+    /// Version raccourcie du « cha-ching » pour que chaque notification ait le sien : iOS ne joue qu'un
+    /// son de notification à la fois et rend muette une notification qui arrive pendant le son de la
+    /// précédente. Le son doit donc être fini avant la suivante. `nil` en Normale (2 s minimum : le son
+    /// complet de 1,4 s a le temps de finir).
+    var shortSoundFile: String? {
+        switch self {
+        case .normal: return nil
+        case .fast: return "cha_ching_rapide.caf"  // 0,8 s pour 1 s d'intervalle
+        case .turbo: return "cha_ching_turbo.caf"  // 0,4 s pour 0,5 s d'intervalle
+        }
+    }
 }
 
 enum IntervalUnit: String, CaseIterable, Identifiable {
