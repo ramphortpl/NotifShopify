@@ -8,7 +8,7 @@ Sur l'iPhone, l'app s'appelle **Shopify** : c'est le nom affiché sous l'icône 
 
 ## Télécharger le .ipa
 
-- **Lien direct (dernière version) :** https://github.com/ramphortpl/testapp/releases/latest/download/NotifApp.ipa
+- **Lien direct (dernière version) :** https://github.com/ramphortpl/NotifShopify/releases/latest/download/NotifApp.ipa
 - Ou dans l'onglet **Actions** → dernier run « Build IPA » → artefact **NotifApp-ipa** (un .zip qui contient le .ipa).
 
 Le .ipa est compilé automatiquement sur un Mac de GitHub à chaque push (voir [`.github/workflows/build-ipa.yml`](.github/workflows/build-ipa.yml)).
