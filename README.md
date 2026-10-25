@@ -45,9 +45,9 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
   - Pour rester active en arrière-plan, l'app utilise une piste audio muette, jusqu'à ce que les 64 dernières soient programmées. Elle ne joue aucun son : le « cha-ching » reste celui d'iOS.
 - **Vitesse** :
   - **Normale** : intervalle réglable avec − / + et **Secondes / Minutes / Heures** (2 secondes minimum).
-  - **Rapide** : une notification par seconde. **Turbo** : deux par seconde. C'est plus rapide que le « cha-ching » (1,4 s), et iOS ne joue qu'un son à la fois.
-  - **Un son par notification** (Rapide et Turbo, activé par défaut) : le « cha-ching » est raccourci (0,8 s en Rapide, 0,4 s en Turbo) pour être fini avant la notification suivante. Chaque notification a ainsi son propre son, joué par iOS. Désactivé, c'est le son complet (1,4 s), et certaines notifications n'ont pas de son.
+  - **Rapide** : une notification par seconde. **Turbo** : deux par seconde. Le « cha-ching » complet (1,4 s) dure plus longtemps que l'intervalle et iOS ne joue qu'un son à la fois : à ces vitesses, certaines notifications n'ont pas de son.
 - **Lancer** : la première notification arrive après un intervalle, puis une autre à chaque intervalle. Exemple : 3 notifications toutes les 10 secondes arrivent après 10 s, 20 s et 30 s.
+- **Version** : affichée tout en bas de l'écran, à côté de « Développé par PL » (par exemple « Version 2.1 (12) »).
 - **En cours** : nombre de notifications restantes et compte à rebours avant la prochaine. **Tout arrêter** annule celles qui ne sont pas encore arrivées.
 - Jusqu'à 64 notifications, tu peux fermer l'app : elles arrivent quand même. L'app garde tes derniers réglages, et si elle est fermée pendant une longue série, elle reprend la suite à sa réouverture.
 
@@ -65,7 +65,6 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 | [`NotifApp/NotificationScheduler.swift`](NotifApp/NotificationScheduler.swift) | Programme et annule les notifications, tire les numéros de commande et remplace `{n}` |
 | [`NotifApp/SeriesRunner.swift`](NotifApp/SeriesRunner.swift) | Fait avancer les séries de plus de 64 notifications, en gardant l'app active en arrière-plan |
 | [`NotifApp/IntervalUnit.swift`](NotifApp/IntervalUnit.swift) | Vitesses (Normale, Rapide, Turbo), unités d'intervalle et textes associés |
-| `NotifApp/cha_ching_rapide.caf`, `NotifApp/cha_ching_turbo.caf` | Versions raccourcies du son (0,8 s et 0,4 s) pour les vitesses Rapide et Turbo |
 | `NotifApp/cha_ching.caf` | Son des notifications (1,4 s). Pour en changer, remplace-le par un autre son `.caf` de moins de 30 secondes, avec le même nom (et adapte l'intervalle minimum dans `IntervalUnit.swift` s'il est plus long) |
 | `NotifApp/silence.wav` | Piste muette qui garde l'app active en arrière-plan pendant une longue série |
 | [`NotifApp/Info.plist`](NotifApp/Info.plist) | Autorise l'audio en arrière-plan (les autres réglages sont générés par Xcode) |

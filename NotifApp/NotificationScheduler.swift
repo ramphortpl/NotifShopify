@@ -12,8 +12,6 @@ struct Series: Codable {
     var numbers: [Int]
     var title: String
     var message: String
-    /// Son joué par iOS à chaque notification (fichier du bundle).
-    var soundFile: String
 
     /// Arrivée de la notification `index` (la première arrive après un intervalle).
     func date(at index: Int) -> Date {
@@ -33,8 +31,8 @@ enum NotificationScheduler {
     static let maxPending = 64
     static let maxCount = 999
 
-    /// Son complet des notifications : fichier du bundle, moins de 30 s (1,4 s ici).
-    static let fullSoundFile = "cha_ching.caf"
+    /// Son des notifications, joué par iOS : fichier du bundle, moins de 30 s (1,4 s ici).
+    private static let soundFile = "cha_ching.caf"
     private static let seriesKey = "series"
 
     private static var center: UNUserNotificationCenter { .current() }
@@ -94,7 +92,7 @@ enum NotificationScheduler {
     static func refill(_ series: Series) async -> Bool {
         let pending = Set(await center.pendingNotificationRequests().map(\.identifier))
         var free = maxPending - pending.count
-        let sound = UNNotificationSound(named: UNNotificationSoundName(series.soundFile))
+        let sound = UNNotificationSound(named: UNNotificationSoundName(soundFile))
         for index in series.numbers.indices {
             let identifier = "serie-\(series.id.uuidString)-\(index + 1)"
             // Déjà passée ou trop proche pour qu'iOS la livre à l'heure.
@@ -122,9 +120,9 @@ enum NotificationScheduler {
         savedSeries = nil
     }
 
-    /// Joue dans l'app un son des notifications, pour l'écouter (muet si l'iPhone est en mode silencieux).
-    static func playSound(_ file: String) {
-        guard let url = Bundle.main.url(forResource: file, withExtension: nil) else { return }
+    /// Joue dans l'app le son des notifications, pour l'écouter (muet si l'iPhone est en mode silencieux).
+    static func playSound() {
+        guard let url = Bundle.main.url(forResource: soundFile, withExtension: nil) else { return }
         var soundID: SystemSoundID = 0
         guard AudioServicesCreateSystemSoundID(url as CFURL, &soundID) == kAudioServicesNoError else { return }
         let id = soundID

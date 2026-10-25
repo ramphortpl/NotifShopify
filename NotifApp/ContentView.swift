@@ -7,8 +7,6 @@ struct ContentView: View {
     @Environment(\.openURL) private var openURL
     @AppStorage("count") private var count = 3
     @AppStorage("speed") private var speed = Speed.normal
-    /// En Rapide et Turbo : « cha-ching » raccourci pour que chaque notification ait le sien.
-    @AppStorage("soundForEach") private var soundForEach = true
     @AppStorage("intervalValue") private var intervalValue = 10
     @AppStorage("intervalUnit") private var unit = IntervalUnit.seconds
     @AppStorage("orderTitle") private var notificationTitle = "Commande #{n}"
@@ -32,9 +30,12 @@ struct ContentView: View {
         speed.fixedInterval ?? TimeInterval(clampedIntervalValue * unit.seconds)
     }
 
-    /// Son joué par iOS à chaque notification de la série.
-    private var soundFile: String {
-        (soundForEach ? speed.shortSoundFile : nil) ?? NotificationScheduler.fullSoundFile
+    /// « 2.1 (12) » : version et numéro de build lus dans l'Info.plist de l'app.
+    private var appVersion: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (\(build))"
     }
 
     /// Tranche des numéros de commande ; un champ vide ou invalide prend une valeur par défaut.
@@ -93,7 +94,7 @@ struct ContentView: View {
                             .focused($focusedField, equals: .message)
                     }
                     Button {
-                        NotificationScheduler.playSound(soundFile)
+                        NotificationScheduler.playSound()
                     } label: {
                         Label("Écouter le son", systemImage: "speaker.wave.2.fill")
                     }
@@ -148,11 +149,6 @@ struct ContentView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    if speed != .normal {
-                        Toggle(isOn: $soundForEach) {
-                            Label("Un son par notification", systemImage: "speaker.wave.3.fill")
-                        }
-                    }
                     if speed == .normal {
                         Stepper(value: $intervalValue, in: unit.range) {
                             Label(unit.every(clampedIntervalValue), systemImage: "timer")
@@ -215,7 +211,7 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .disabled(isScheduling)
-            Text("Développé par PL")
+            Text("Développé par PL · Version \(appVersion)")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -249,13 +245,9 @@ struct ContentView: View {
         text += count == 1
             ? "Ta notification arrivera dans \(shortDuration(interval))."
             : "La première arrivera dans \(shortDuration(interval)), la dernière dans \(shortDuration(interval * Double(count)))."
-        if speed != .normal && soundForEach {
-            let length = speed == .turbo ? "0,4 s" : "0,8 s"
-            text += " iOS ne joue qu'un son de notification à la fois : pour que chaque notification ait le sien,"
-                + " le « cha-ching » est raccourci à \(length), pour finir avant la suivante."
-        } else if speed != .normal {
-            text += " Son complet (1,4 s), plus long que l'intervalle : iOS ne joue qu'un son à la fois,"
-                + " donc certaines notifications n'auront pas de son."
+        if speed != .normal {
+            text += " Le « cha-ching » (1,4 s) dure plus longtemps que l'intervalle et iOS ne joue qu'un son"
+                + " à la fois : certaines notifications n'auront pas de son. En Normale, chacune a son son en entier."
         } else if unit == .seconds && clampedIntervalValue == unit.range.lowerBound {
             text += " \(unit.range.lowerBound) s minimum en vitesse normale : le « cha-ching » dure 1,4 s"
                 + " et iOS ne joue qu'un son de notification à la fois."
@@ -298,8 +290,7 @@ struct ContentView: View {
                 interval: interval,
                 numbers: NotificationScheduler.orderNumbers(count: count, in: orderRange),
                 title: notificationTitle,
-                message: notificationMessage,
-                soundFile: soundFile
+                message: notificationMessage
             )
             SeriesRunner.shared.start(series)
             scheduledDates = series.remainingDates()
