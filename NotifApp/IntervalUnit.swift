@@ -14,8 +14,15 @@ enum IntervalUnit: String, CaseIterable, Identifiable {
     }
 
     /// Valeurs accessibles avec les boutons − / +.
+    /// 2 s minimum : le « cha-ching » dure 1,4 s et iOS ne joue qu'un son de notification à la fois,
+    /// donc à 1 s d'intervalle une notification sur deux arriverait pendant le son de la précédente
+    /// et resterait muette.
     var range: ClosedRange<Int> {
-        self == .hours ? 1...24 : 1...59
+        switch self {
+        case .seconds: 2...59
+        case .minutes: 1...59
+        case .hours: 1...24
+        }
     }
 
     var title: String {

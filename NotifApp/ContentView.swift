@@ -17,7 +17,12 @@ struct ContentView: View {
     @State private var isScheduling = false
     @State private var notificationsDenied = false
 
-    private var intervalSeconds: Int { intervalValue * unit.seconds }
+    /// Intervalle ramené dans les valeurs permises (un ancien réglage à 1 s devient 2 s).
+    private var clampedIntervalValue: Int {
+        min(max(intervalValue, unit.range.lowerBound), unit.range.upperBound)
+    }
+
+    private var intervalSeconds: Int { clampedIntervalValue * unit.seconds }
 
     /// Tranche des numéros de commande ; un champ vide ou invalide prend une valeur par défaut.
     private var orderRange: ClosedRange<Int> {
@@ -75,7 +80,7 @@ struct ContentView: View {
                             .focused($focusedField, equals: .message)
                     }
                     Button {
-                        NotificationScheduler.playSound(every: TimeInterval(intervalSeconds))
+                        NotificationScheduler.playSound()
                     } label: {
                         Label("Écouter le son", systemImage: "speaker.wave.2.fill")
                     }
@@ -144,7 +149,7 @@ struct ContentView: View {
             }
         }
         .onChange(of: unit) {
-            intervalValue = min(max(intervalValue, unit.range.lowerBound), unit.range.upperBound)
+            intervalValue = clampedIntervalValue
         }
         .task {
             await loadState()
@@ -173,13 +178,14 @@ struct ContentView: View {
         var text = count == 1
             ? "Ta notification arrivera dans \(first)."
             : "La première arrivera dans \(first), la dernière dans \(shortDuration(intervalSeconds * count))."
-        if TimeInterval(intervalSeconds) < NotificationScheduler.shortSoundMaxInterval {
-            text += " Le « cha-ching » est raccourci pour que chaque notification ait le sien."
+        if unit == .seconds && clampedIntervalValue == unit.range.lowerBound {
+            text += " \(unit.range.lowerBound) s minimum : le « cha-ching » dure 1,4 s et iOS ne joue qu'un son de notification à la fois."
         }
         return text
     }
 
     private func loadState() async {
+        intervalValue = clampedIntervalValue
         notificationsDenied = await NotificationScheduler.isDenied()
         scheduledDates = await NotificationScheduler.pendingDates()
     }

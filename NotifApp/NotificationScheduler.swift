@@ -8,15 +8,8 @@ enum NotificationScheduler {
 
     private static var center: UNUserNotificationCenter { .current() }
 
-    /// iOS ne joue qu'un son de notification à la fois : celui d'une notification qui arrive
-    /// pendant qu'un autre joue est sauté. En dessous de cet intervalle, on prend donc une
-    /// version courte du « cha-ching » (0,7 s au lieu de 1,4 s) qui se termine avant la suivante.
-    static let shortSoundMaxInterval: TimeInterval = 3
-
-    /// Son des notifications (fichier du bundle, moins de 30 s).
-    static func soundFile(every interval: TimeInterval) -> String {
-        interval < shortSoundMaxInterval ? "cha_ching_court.caf" : "cha_ching.caf"
-    }
+    /// Son des notifications : fichier du bundle, moins de 30 s (1,4 s ici).
+    private static let soundFile = "cha_ching.caf"
 
     /// Ne déclenche pas la demande d'autorisation.
     static func isDenied() async -> Bool {
@@ -57,7 +50,7 @@ enum NotificationScheduler {
     static func schedule(numbers: [Int], every interval: TimeInterval, title: String, message: String) async -> [Date] {
         center.removeAllPendingNotificationRequests()
 
-        let sound = UNNotificationSound(named: UNNotificationSoundName(soundFile(every: interval)))
+        let sound = UNNotificationSound(named: UNNotificationSoundName(soundFile))
         let start = Date()
         var dates: [Date] = []
         for (offset, number) in numbers.enumerated() {
@@ -84,9 +77,9 @@ enum NotificationScheduler {
         center.removeAllPendingNotificationRequests()
     }
 
-    /// Joue dans l'app le son qu'auront les notifications (muet si l'iPhone est en mode silencieux).
-    static func playSound(every interval: TimeInterval) {
-        guard let url = Bundle.main.url(forResource: soundFile(every: interval), withExtension: nil) else { return }
+    /// Joue dans l'app le son des notifications (muet si l'iPhone est en mode silencieux).
+    static func playSound() {
+        guard let url = Bundle.main.url(forResource: soundFile, withExtension: nil) else { return }
         var soundID: SystemSoundID = 0
         guard AudioServicesCreateSystemSoundID(url as CFURL, &soundID) == kAudioServicesNoError else { return }
         let id = soundID
