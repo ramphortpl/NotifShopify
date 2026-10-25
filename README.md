@@ -4,6 +4,8 @@ Petite app iPhone (SwiftUI) : tu écris le texte de tes notifications, tu choisi
 
 <p align="center"><img src="NotifApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="Icône de l'app"></p>
 
+Sur l'iPhone, l'app s'appelle **Shopify** : c'est le nom affiché sous l'icône et au-dessus des notifications (réglage `INFOPLIST_KEY_CFBundleDisplayName` du projet Xcode).
+
 ## Télécharger le .ipa
 
 - **Lien direct (dernière version) :** https://github.com/ramphortpl/testapp/releases/latest/download/NotifApp.ipa
@@ -22,7 +24,7 @@ Le .ipa est compilé automatiquement sur un Mac de GitHub à chaque push (voir [
 3. Glisse `NotifApp.ipa` dans Sideloadly, entre ton identifiant Apple, puis clique sur **Start**.
 4. Sur l'iPhone : **Réglages → Confidentialité et sécurité → Mode développeur** → active-le (l'iPhone redémarre).
 5. **Réglages → Général → VPN et gestion de l'appareil** → touche ton identifiant Apple → **Faire confiance**.
-6. Ouvre l'app **Notif**, écris ton texte, choisis le nombre et l'intervalle, appuie sur **Lancer** et autorise les notifications 🎉
+6. Ouvre l'app **Shopify**, écris ton texte, choisis le nombre et l'intervalle, appuie sur **Lancer** et autorise les notifications 🎉
 
 Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suffit de la réinstaller avec Sideloadly (tes réglages restent).
 
@@ -46,7 +48,7 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 
 ### La notification n'apparaît pas ?
 
-- Vérifie **Réglages → Notifications → Notif** : « Autoriser les notifications » doit être activé.
+- Vérifie **Réglages → Notifications → Shopify** : « Autoriser les notifications » doit être activé.
 - Désactive le mode **Concentration / Ne pas déranger**.
 - Tu as une **Apple Watch** ? Quand l'iPhone est verrouillé et la montre portée, c'est la montre qui reçoit l'alerte, et l'iPhone ne sonne pas.
 
