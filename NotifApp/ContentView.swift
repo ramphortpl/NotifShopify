@@ -75,7 +75,7 @@ struct ContentView: View {
                             .focused($focusedField, equals: .message)
                     }
                     Button {
-                        SoundPlayer.shared.preview()
+                        NotificationScheduler.playSound(every: TimeInterval(intervalSeconds))
                     } label: {
                         Label("Écouter le son", systemImage: "speaker.wave.2.fill")
                     }
@@ -173,21 +173,15 @@ struct ContentView: View {
         var text = count == 1
             ? "Ta notification arrivera dans \(first)."
             : "La première arrivera dans \(first), la dernière dans \(shortDuration(intervalSeconds * count))."
-        if TimeInterval(intervalSeconds) < NotificationScheduler.appSoundMaxInterval {
-            text += " Laisse l'app ouverte en arrière-plan pour que chaque notification sonne."
+        if TimeInterval(intervalSeconds) < NotificationScheduler.shortSoundMaxInterval {
+            text += " Le « cha-ching » est raccourci pour que chaque notification ait le sien."
         }
         return text
     }
 
     private func loadState() async {
         notificationsDenied = await NotificationScheduler.isDenied()
-        let pending = await NotificationScheduler.pending()
-        scheduledDates = pending.map(\.date)
-        // App relancée pendant une série rapprochée : elle reprend le son.
-        let appSoundDates = pending.filter(\.appPlaysSound).map(\.date)
-        if !appSoundDates.isEmpty {
-            SoundPlayer.shared.play(at: appSoundDates)
-        }
+        scheduledDates = await NotificationScheduler.pendingDates()
     }
 
     /// Retire de « En cours » les notifications déjà arrivées, au moment où elles arrivent.
@@ -207,25 +201,17 @@ struct ContentView: View {
             let granted = await NotificationScheduler.requestAuthorization()
             notificationsDenied = !granted
             guard granted else { return }
-            let interval = TimeInterval(intervalSeconds)
-            let dates = await NotificationScheduler.schedule(
+            scheduledDates = await NotificationScheduler.schedule(
                 numbers: NotificationScheduler.orderNumbers(count: count, in: orderRange),
-                every: interval,
+                every: TimeInterval(intervalSeconds),
                 title: notificationTitle,
                 message: notificationMessage
             )
-            scheduledDates = dates
-            if interval < NotificationScheduler.appSoundMaxInterval {
-                SoundPlayer.shared.play(at: dates)
-            } else {
-                SoundPlayer.shared.stop()
-            }
         }
     }
 
     private func stop() {
         NotificationScheduler.cancelAll()
-        SoundPlayer.shared.stop()
         scheduledDates = []
     }
 }

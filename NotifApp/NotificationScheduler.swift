@@ -1,27 +1,21 @@
+import AudioToolbox
 import Foundation
 import UserNotifications
 
 /// Programme et annule les séries de notifications locales.
 enum NotificationScheduler {
-    /// Son de toutes les notifications : fichier du bundle, moins de 30 s (sinon iOS joue le son par défaut).
-    static let soundFile = "cha_ching.caf"
-    /// En dessous de cet intervalle, iOS sauterait des sons : les notifications partent sans son
-    /// et c'est l'app qui joue « cha-ching » (voir `SoundPlayer`).
-    static let appSoundMaxInterval: TimeInterval = 60
-
-    /// Notification encore à venir.
-    struct Pending {
-        let date: Date
-        /// C'est l'app qui doit jouer son son.
-        let appPlaysSound: Bool
-    }
-
     private static let dateKey = "date"
 
     private static var center: UNUserNotificationCenter { .current() }
 
-    private static var systemSound: UNNotificationSound {
-        UNNotificationSound(named: UNNotificationSoundName(soundFile))
+    /// iOS ne joue qu'un son de notification à la fois : celui d'une notification qui arrive
+    /// pendant qu'un autre joue est sauté. En dessous de cet intervalle, on prend donc une
+    /// version courte du « cha-ching » (0,7 s au lieu de 1,4 s) qui se termine avant la suivante.
+    static let shortSoundMaxInterval: TimeInterval = 3
+
+    /// Son des notifications (fichier du bundle, moins de 30 s).
+    static func soundFile(every interval: TimeInterval) -> String {
+        interval < shortSoundMaxInterval ? "cha_ching_court.caf" : "cha_ching.caf"
     }
 
     /// Ne déclenche pas la demande d'autorisation.
@@ -63,6 +57,7 @@ enum NotificationScheduler {
     static func schedule(numbers: [Int], every interval: TimeInterval, title: String, message: String) async -> [Date] {
         center.removeAllPendingNotificationRequests()
 
+        let sound = UNNotificationSound(named: UNNotificationSoundName(soundFile(every: interval)))
         let start = Date()
         var dates: [Date] = []
         for (offset, number) in numbers.enumerated() {
@@ -73,7 +68,7 @@ enum NotificationScheduler {
             let content = UNMutableNotificationContent()
             content.title = text.title
             content.body = text.body
-            content.sound = interval < appSoundMaxInterval ? nil : systemSound
+            content.sound = sound
             content.threadIdentifier = "serie"
             content.userInfo = [dateKey: date.timeIntervalSince1970]
 
@@ -89,51 +84,23 @@ enum NotificationScheduler {
         center.removeAllPendingNotificationRequests()
     }
 
-    /// Notifications encore à venir, pour retrouver la série quand l'app est rouverte.
-    static func pending() async -> [Pending] {
+    /// Joue dans l'app le son qu'auront les notifications (muet si l'iPhone est en mode silencieux).
+    static func playSound(every interval: TimeInterval) {
+        guard let url = Bundle.main.url(forResource: soundFile(every: interval), withExtension: nil) else { return }
+        var soundID: SystemSoundID = 0
+        guard AudioServicesCreateSystemSoundID(url as CFURL, &soundID) == kAudioServicesNoError else { return }
+        let id = soundID
+        AudioServicesPlaySystemSoundWithCompletion(id) {
+            AudioServicesDisposeSystemSoundID(id)
+        }
+    }
+
+    /// Dates des notifications encore à venir, pour retrouver la série quand l'app est rouverte.
+    static func pendingDates() async -> [Date] {
         await center.pendingNotificationRequests()
-            .compactMap { request -> Pending? in
-                guard let date = fireDate(of: request), date > .now else { return nil }
-                return Pending(date: date, appPlaysSound: request.content.sound == nil)
-            }
-            .sorted { $0.date < $1.date }
-    }
-
-    /// L'app va être fermée : les notifications à venir dont elle devait jouer le son reprennent
-    /// le son système. Bloque au plus 3 secondes, le temps qu'iOS enregistre les changements.
-    static func handOverSoundToSystem() {
-        let fetched = DispatchSemaphore(value: 0)
-        let pending = Box<[UNNotificationRequest]>([])
-        center.getPendingNotificationRequests { requests in
-            pending.value = requests
-            fetched.signal()
-        }
-        guard fetched.wait(timeout: .now() + 1) == .success else { return }
-
-        let added = DispatchGroup()
-        for request in pending.value where request.content.sound == nil {
-            guard let date = fireDate(of: request), date.timeIntervalSinceNow > 0.5,
-                  let content = request.content.mutableCopy() as? UNMutableNotificationContent else { continue }
-            content.sound = systemSound
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: date.timeIntervalSinceNow, repeats: false)
-            added.enter()
-            center.add(UNNotificationRequest(identifier: request.identifier, content: content, trigger: trigger)) { _ in
-                added.leave()
-            }
-        }
-        _ = added.wait(timeout: .now() + 2)
-    }
-
-    private static func fireDate(of request: UNNotificationRequest) -> Date? {
-        (request.content.userInfo[dateKey] as? TimeInterval).map(Date.init(timeIntervalSince1970:))
-    }
-}
-
-/// Récupère le résultat d'un callback pour l'attendre de façon synchrone.
-private final class Box<Value> {
-    var value: Value
-
-    init(_ value: Value) {
-        self.value = value
+            .compactMap { $0.content.userInfo[dateKey] as? TimeInterval }
+            .map(Date.init(timeIntervalSince1970:))
+            .filter { $0 > .now }
+            .sorted()
     }
 }
