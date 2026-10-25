@@ -7,6 +7,8 @@ struct ContentView: View {
     @Environment(\.openURL) private var openURL
     @AppStorage("count") private var count = 3
     @AppStorage("speed") private var speed = Speed.normal
+    /// En Rapide et Turbo : l'app joue un « cha-ching » par notification (voir `SeriesRunner`).
+    @AppStorage("soundForEach") private var soundForEach = true
     @AppStorage("intervalValue") private var intervalValue = 10
     @AppStorage("intervalUnit") private var unit = IntervalUnit.seconds
     @AppStorage("orderTitle") private var notificationTitle = "Commande #{n}"
@@ -141,6 +143,11 @@ struct ContentView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    if speed != .normal {
+                        Toggle(isOn: $soundForEach) {
+                            Label("Un son par notification", systemImage: "speaker.wave.3.fill")
+                        }
+                    }
                     if speed == .normal {
                         Stepper(value: $intervalValue, in: unit.range) {
                             Label(unit.every(clampedIntervalValue), systemImage: "timer")
@@ -194,16 +201,22 @@ struct ContentView: View {
     }
 
     private var launchButton: some View {
-        Button(action: start) {
-            Label(scheduledDates.isEmpty ? "Lancer" : "Relancer", systemImage: "paperplane.fill")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+        VStack(spacing: 8) {
+            Button(action: start) {
+                Label(scheduledDates.isEmpty ? "Lancer" : "Relancer", systemImage: "paperplane.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isScheduling)
+            Text("Développé par PL")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(isScheduling)
         .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
         .background(.bar)
     }
 
@@ -231,7 +244,11 @@ struct ContentView: View {
         text += count == 1
             ? "Ta notification arrivera dans \(shortDuration(interval))."
             : "La première arrivera dans \(shortDuration(interval)), la dernière dans \(shortDuration(interval * Double(count)))."
-        if speed != .normal {
+        if speed != .normal && soundForEach {
+            text += " iOS ne jouerait qu'un son à la fois : c'est donc l'app qui joue le « cha-ching » de chaque"
+                + " notification, et les sons se superposent. Ce son suit le volume des médias et sonne même en"
+                + " mode silencieux. Laisse l'app en arrière-plan pendant la série."
+        } else if speed != .normal {
             text += " C'est plus rapide que le « cha-ching » (1,4 s) : iOS ne joue qu'un son à la fois,"
                 + " donc certaines notifications n'auront pas de son."
         } else if unit == .seconds && clampedIntervalValue == unit.range.lowerBound {
@@ -276,7 +293,8 @@ struct ContentView: View {
                 interval: interval,
                 numbers: NotificationScheduler.orderNumbers(count: count, in: orderRange),
                 title: notificationTitle,
-                message: notificationMessage
+                message: notificationMessage,
+                appPlaysSound: speed != .normal && soundForEach
             )
             SeriesRunner.shared.start(series)
             scheduledDates = series.remainingDates()

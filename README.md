@@ -45,7 +45,8 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
   - Pour rester active en arrière-plan, l'app utilise une piste audio muette, jusqu'à ce que les 64 dernières soient programmées. Elle ne joue aucun son : le « cha-ching » reste celui d'iOS.
 - **Vitesse** :
   - **Normale** : intervalle réglable avec − / + et **Secondes / Minutes / Heures** (2 secondes minimum).
-  - **Rapide** : une notification par seconde. **Turbo** : deux par seconde. C'est plus rapide que le « cha-ching » (1,4 s), donc certaines notifications n'auront pas de son.
+  - **Rapide** : une notification par seconde. **Turbo** : deux par seconde. C'est plus rapide que le « cha-ching » (1,4 s), et iOS ne joue qu'un son à la fois.
+  - **Un son par notification** (Rapide et Turbo, activé par défaut) : c'est l'app qui joue le « cha-ching » de chaque notification, et les sons se superposent. Ce son suit le volume des médias et sonne même en mode silencieux ; laisse l'app en arrière-plan pendant la série. Si tu la fermes, iOS reprend la main avec son propre son. Désactivé, c'est le son d'iOS, et certaines notifications n'ont pas de son.
 - **Lancer** : la première notification arrive après un intervalle, puis une autre à chaque intervalle. Exemple : 3 notifications toutes les 10 secondes arrivent après 10 s, 20 s et 30 s.
 - **En cours** : nombre de notifications restantes et compte à rebours avant la prochaine. **Tout arrêter** annule celles qui ne sont pas encore arrivées.
 - Jusqu'à 64 notifications, tu peux fermer l'app : elles arrivent quand même. L'app garde tes derniers réglages, et si elle est fermée pendant une longue série, elle reprend la suite à sa réouverture.
@@ -79,3 +80,7 @@ xcodebuild build -project NotifApp.xcodeproj -target NotifApp -configuration Rel
 mkdir -p Payload && cp -R build/Release-iphoneos/NotifApp.app Payload/
 zip -qry NotifApp.ipa Payload
 ```
+
+---
+
+Développé par PL.
