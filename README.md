@@ -39,12 +39,16 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 - **Notification** : écris le titre et le message (par défaut « Commande #{n} » et « 50,00 €, 1 article de Boutique en ligne • Tarilo »). `{n}` est remplacé par le numéro de commande. L'aperçu montre le rendu.
 - **Numéros de commande** : choisis la tranche (**De** / **À**). Chaque notification reçoit un numéro au hasard dans cette tranche, en ordre croissant comme de vraies commandes (par exemple #1012, #1047, #1083).
 - **Son** : chaque notification fait le « cha-ching » complet (1,4 s), joué par iOS comme un son de notification normal (volume de la sonnerie, muet en mode silencieux). Le bouton **Écouter le son** permet de l'entendre.
-  - iOS ne joue qu'un son de notification à la fois : si une notification arrive pendant que le son de la précédente joue encore, la nouvelle reste muette. C'est pour ça que l'intervalle minimum est de **2 secondes** : chaque son a le temps de finir avant la notification suivante.
-- **Nombre de notifications** : boutons − / + (de 1 à 64, la limite d'iOS).
-- **Intervalle** : boutons − / + pour la valeur (2 secondes minimum), et **Secondes / Minutes / Heures** pour l'unité.
+  - iOS ne joue qu'un son de notification à la fois : si une notification arrive pendant que le son de la précédente joue encore, la nouvelle reste muette. C'est pour ça que l'intervalle minimum est de **2 secondes** en vitesse Normale : chaque son a le temps de finir avant la notification suivante.
+- **Nombre de notifications** : tape le nombre ou utilise − / + (jusqu'à 999).
+  - iOS ne garde que **64 notifications** programmées d'avance. Au-delà, l'app programme la suite au fur et à mesure : pendant la série, laisse-la en arrière-plan (ne la ferme pas depuis le sélecteur d'apps). L'iPhone peut être verrouillé.
+  - Pour rester active en arrière-plan, l'app utilise une piste audio muette, jusqu'à ce que les 64 dernières soient programmées. Elle ne joue aucun son : le « cha-ching » reste celui d'iOS.
+- **Vitesse** :
+  - **Normale** : intervalle réglable avec − / + et **Secondes / Minutes / Heures** (2 secondes minimum).
+  - **Rapide** : une notification par seconde. **Turbo** : deux par seconde. C'est plus rapide que le « cha-ching » (1,4 s), donc certaines notifications n'auront pas de son.
 - **Lancer** : la première notification arrive après un intervalle, puis une autre à chaque intervalle. Exemple : 3 notifications toutes les 10 secondes arrivent après 10 s, 20 s et 30 s.
 - **En cours** : nombre de notifications restantes et compte à rebours avant la prochaine. **Tout arrêter** annule celles qui ne sont pas encore arrivées.
-- Tu peux fermer l'app ou verrouiller l'iPhone : les notifications arrivent quand même. L'app garde tes derniers réglages.
+- Jusqu'à 64 notifications, tu peux fermer l'app : elles arrivent quand même. L'app garde tes derniers réglages, et si elle est fermée pendant une longue série, elle reprend la suite à sa réouverture.
 
 ### La notification n'apparaît pas ?
 
@@ -58,8 +62,11 @@ Avec un identifiant Apple gratuit, l'app expire au bout de **7 jours** : il suff
 | --- | --- |
 | [`NotifApp/ContentView.swift`](NotifApp/ContentView.swift) | L'écran : texte et aperçu de la notification, nombre, intervalle, boutons Lancer et Tout arrêter |
 | [`NotifApp/NotificationScheduler.swift`](NotifApp/NotificationScheduler.swift) | Programme et annule les notifications, tire les numéros de commande et remplace `{n}` |
-| [`NotifApp/IntervalUnit.swift`](NotifApp/IntervalUnit.swift) | Unités d'intervalle (secondes, minutes, heures) et textes associés |
+| [`NotifApp/SeriesRunner.swift`](NotifApp/SeriesRunner.swift) | Fait avancer les séries de plus de 64 notifications, en gardant l'app active en arrière-plan |
+| [`NotifApp/IntervalUnit.swift`](NotifApp/IntervalUnit.swift) | Vitesses (Normale, Rapide, Turbo), unités d'intervalle et textes associés |
 | `NotifApp/cha_ching.caf` | Son des notifications (1,4 s). Pour en changer, remplace-le par un autre son `.caf` de moins de 30 secondes, avec le même nom (et adapte l'intervalle minimum dans `IntervalUnit.swift` s'il est plus long) |
+| `NotifApp/silence.wav` | Piste muette qui garde l'app active en arrière-plan pendant une longue série |
+| [`NotifApp/Info.plist`](NotifApp/Info.plist) | Autorise l'audio en arrière-plan (les autres réglages sont générés par Xcode) |
 | [`NotifApp/NotifAppApp.swift`](NotifApp/NotifAppApp.swift) | Point d'entrée de l'app ; affiche les notifications même quand l'app est ouverte |
 
 Ce sont des notifications **locales** (`UNUserNotificationCenter`) : pas besoin de serveur ni de certificat push.

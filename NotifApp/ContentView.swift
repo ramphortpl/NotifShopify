@@ -2,10 +2,11 @@ import SwiftUI
 
 @MainActor
 struct ContentView: View {
-    private enum Field { case title, message, orderFrom, orderTo }
+    private enum Field { case title, message, orderFrom, orderTo, count }
 
     @Environment(\.openURL) private var openURL
     @AppStorage("count") private var count = 3
+    @AppStorage("speed") private var speed = Speed.normal
     @AppStorage("intervalValue") private var intervalValue = 10
     @AppStorage("intervalUnit") private var unit = IntervalUnit.seconds
     @AppStorage("orderTitle") private var notificationTitle = "Commande #{n}"
@@ -13,6 +14,8 @@ struct ContentView: View {
     @AppStorage("orderFrom") private var orderFrom = "1000"
     @AppStorage("orderTo") private var orderTo = "1099"
     @FocusState private var focusedField: Field?
+    /// Texte du champ « nombre », recopié dans `count` à chaque frappe.
+    @State private var countText = ""
     @State private var scheduledDates: [Date] = []
     @State private var isScheduling = false
     @State private var notificationsDenied = false
@@ -22,7 +25,10 @@ struct ContentView: View {
         min(max(intervalValue, unit.range.lowerBound), unit.range.upperBound)
     }
 
-    private var intervalSeconds: Int { clampedIntervalValue * unit.seconds }
+    /// Secondes entre deux notifications.
+    private var interval: TimeInterval {
+        speed.fixedInterval ?? TimeInterval(clampedIntervalValue * unit.seconds)
+    }
 
     /// Tranche des numéros de commande ; un champ vide ou invalide prend une valeur par défaut.
     private var orderRange: ClosedRange<Int> {
@@ -106,32 +112,48 @@ struct ContentView: View {
                 } header: {
                     Text("Numéros de commande")
                 } footer: {
-                    Text("Chaque notification reçoit un numéro au hasard dans cette tranche, en ordre croissant.")
+                    Text(orderFooter)
                 }
 
                 Section {
-                    Stepper(value: $count, in: 1...64) {
-                        Label("\(count) notification\(count > 1 ? "s" : "")", systemImage: "bell.fill")
-                            .font(.title3.weight(.semibold))
+                    Stepper(value: $count, in: 1...NotificationScheduler.maxCount) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bell.fill")
+                                .foregroundStyle(.tint)
+                            TextField("1", text: $countText)
+                                .keyboardType(.numberPad)
+                                .focused($focusedField, equals: .count)
+                                .fixedSize()
+                            Text(count > 1 ? "notifications" : "notification")
+                        }
+                        .font(.title3.weight(.semibold))
                     }
                 } header: {
                     Text("Nombre de notifications")
                 } footer: {
-                    Text("64 au maximum (limite d'iOS).")
+                    Text(countFooter)
                 }
 
                 Section {
-                    Stepper(value: $intervalValue, in: unit.range) {
-                        Label(unit.every(intervalValue), systemImage: "timer")
-                    }
-                    Picker("Unité", selection: $unit) {
-                        ForEach(IntervalUnit.allCases) { option in
+                    Picker("Vitesse", selection: $speed) {
+                        ForEach(Speed.allCases) { option in
                             Text(option.title).tag(option)
                         }
                     }
                     .pickerStyle(.segmented)
+                    if speed == .normal {
+                        Stepper(value: $intervalValue, in: unit.range) {
+                            Label(unit.every(clampedIntervalValue), systemImage: "timer")
+                        }
+                        Picker("Unité", selection: $unit) {
+                            ForEach(IntervalUnit.allCases) { option in
+                                Text(option.title).tag(option)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
                 } header: {
-                    Text("Intervalle")
+                    Text("Vitesse")
                 } footer: {
                     Text(summary)
                 }
@@ -150,6 +172,18 @@ struct ContentView: View {
         }
         .onChange(of: unit) {
             intervalValue = clampedIntervalValue
+        }
+        .onChange(of: countText) {
+            if let value = Int(countText) {
+                count = min(max(value, 1), NotificationScheduler.maxCount)
+            }
+        }
+        .onChange(of: count) {
+            if focusedField != .count { countText = String(count) }
+        }
+        .onChange(of: focusedField) {
+            // En quittant le champ, affiche le nombre retenu (ex. 5000 devient 999).
+            if focusedField != .count { countText = String(count) }
         }
         .task {
             await loadState()
@@ -173,21 +207,51 @@ struct ContentView: View {
         .background(.bar)
     }
 
+    private var orderFooter: String {
+        let text = "Chaque notification reçoit un numéro au hasard dans cette tranche, en ordre croissant."
+        guard orderRange.count < count else { return text }
+        return text + " La tranche contient moins de numéros que de notifications : certains se répéteront."
+    }
+
+    private var countFooter: String {
+        let text = "Jusqu'à \(NotificationScheduler.maxCount)."
+        guard count > NotificationScheduler.maxPending else { return text }
+        return text + " iOS n'en garde que \(NotificationScheduler.maxPending) d'avance : l'app programme la suite"
+            + " au fur et à mesure. Pendant la série, laisse-la en arrière-plan (ne la ferme pas depuis le"
+            + " sélecteur d'apps) ; l'iPhone peut être verrouillé."
+    }
+
     private var summary: String {
-        let first = shortDuration(intervalSeconds)
-        var text = count == 1
-            ? "Ta notification arrivera dans \(first)."
-            : "La première arrivera dans \(first), la dernière dans \(shortDuration(intervalSeconds * count))."
-        if unit == .seconds && clampedIntervalValue == unit.range.lowerBound {
-            text += " \(unit.range.lowerBound) s minimum : le « cha-ching » dure 1,4 s et iOS ne joue qu'un son de notification à la fois."
+        var text = ""
+        switch speed {
+        case .normal: break
+        case .fast: text = "Une notification par seconde. "
+        case .turbo: text = "Deux notifications par seconde. "
+        }
+        text += count == 1
+            ? "Ta notification arrivera dans \(shortDuration(interval))."
+            : "La première arrivera dans \(shortDuration(interval)), la dernière dans \(shortDuration(interval * Double(count)))."
+        if speed != .normal {
+            text += " C'est plus rapide que le « cha-ching » (1,4 s) : iOS ne joue qu'un son à la fois,"
+                + " donc certaines notifications n'auront pas de son."
+        } else if unit == .seconds && clampedIntervalValue == unit.range.lowerBound {
+            text += " \(unit.range.lowerBound) s minimum en vitesse normale : le « cha-ching » dure 1,4 s"
+                + " et iOS ne joue qu'un son de notification à la fois."
         }
         return text
     }
 
     private func loadState() async {
         intervalValue = clampedIntervalValue
+        countText = String(count)
         notificationsDenied = await NotificationScheduler.isDenied()
-        scheduledDates = await NotificationScheduler.pendingDates()
+        // App relancée pendant une série : reprend là où elle en est.
+        if let series = NotificationScheduler.savedSeries, !series.remainingDates().isEmpty {
+            scheduledDates = series.remainingDates()
+            SeriesRunner.shared.resume()
+        } else {
+            NotificationScheduler.savedSeries = nil
+        }
     }
 
     /// Retire de « En cours » les notifications déjà arrivées, au moment où elles arrivent.
@@ -207,17 +271,21 @@ struct ContentView: View {
             let granted = await NotificationScheduler.requestAuthorization()
             notificationsDenied = !granted
             guard granted else { return }
-            scheduledDates = await NotificationScheduler.schedule(
+            let series = Series(
+                start: .now,
+                interval: interval,
                 numbers: NotificationScheduler.orderNumbers(count: count, in: orderRange),
-                every: TimeInterval(intervalSeconds),
                 title: notificationTitle,
                 message: notificationMessage
             )
+            SeriesRunner.shared.start(series)
+            scheduledDates = series.remainingDates()
         }
     }
 
     private func stop() {
-        NotificationScheduler.cancelAll()
+        SeriesRunner.shared.stop()
+        NotificationScheduler.cancel()
         scheduledDates = []
     }
 }

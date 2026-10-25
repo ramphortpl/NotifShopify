@@ -1,5 +1,29 @@
 import Foundation
 
+/// Vitesse des notifications : intervalle réglable, ou plus rapide que son minimum de 2 s.
+enum Speed: String, CaseIterable, Identifiable {
+    case normal, fast, turbo
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .normal: "Normale"
+        case .fast: "Rapide"
+        case .turbo: "Turbo"
+        }
+    }
+
+    /// Intervalle imposé par la vitesse ; `nil` pour l'intervalle réglable.
+    var fixedInterval: TimeInterval? {
+        switch self {
+        case .normal: return nil
+        case .fast: return 1
+        case .turbo: return 0.5
+        }
+    }
+}
+
 enum IntervalUnit: String, CaseIterable, Identifiable {
     case seconds, minutes, hours
 
@@ -47,8 +71,12 @@ enum IntervalUnit: String, CaseIterable, Identifiable {
     }
 }
 
-/// « 50 s », « 1 h 30 min »
-func shortDuration(_ totalSeconds: Int) -> String {
-    let parts = [(totalSeconds / 3600, "h"), (totalSeconds % 3600 / 60, "min"), (totalSeconds % 60, "s")]
+/// « 0,5 s », « 50 s », « 1 h 30 min »
+func shortDuration(_ seconds: TimeInterval) -> String {
+    if seconds < 60, seconds.rounded() != seconds {
+        return String(format: "%.1f s", seconds).replacingOccurrences(of: ".", with: ",")
+    }
+    let total = Int(seconds.rounded())
+    let parts = [(total / 3600, "h"), (total % 3600 / 60, "min"), (total % 60, "s")]
     return parts.filter { $0.0 > 0 }.map { "\($0.0) \($0.1)" }.joined(separator: " ")
 }

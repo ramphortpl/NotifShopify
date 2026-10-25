@@ -2,14 +2,50 @@ import AudioToolbox
 import Foundation
 import UserNotifications
 
+/// Une série de notifications, enregistrée pour pouvoir la reprendre si l'app est relancée.
+struct Series: Codable {
+    /// Rend les identifiants uniques : une notification qui reprend l'identifiant d'une notification
+    /// déjà reçue la remplace dans le centre de notifications.
+    var id = UUID()
+    var start: Date
+    var interval: TimeInterval
+    var numbers: [Int]
+    var title: String
+    var message: String
+
+    /// Arrivée de la notification `index` (la première arrive après un intervalle).
+    func date(at index: Int) -> Date {
+        start.addingTimeInterval(interval * Double(index + 1))
+    }
+
+    /// Dates des notifications pas encore arrivées.
+    func remainingDates(after now: Date = .now) -> [Date] {
+        numbers.indices.map(date(at:)).filter { $0 > now }
+    }
+}
+
 /// Programme et annule les séries de notifications locales.
 enum NotificationScheduler {
-    private static let dateKey = "date"
-
-    private static var center: UNUserNotificationCenter { .current() }
+    /// iOS ne garde que les 64 prochaines notifications programmées d'une app : au-delà, la suite
+    /// est programmée au fur et à mesure (voir `SeriesRunner`).
+    static let maxPending = 64
+    static let maxCount = 999
 
     /// Son des notifications : fichier du bundle, moins de 30 s (1,4 s ici).
     private static let soundFile = "cha_ching.caf"
+    private static let seriesKey = "series"
+
+    private static var center: UNUserNotificationCenter { .current() }
+
+    /// Série en cours, enregistrée dans les réglages de l'app.
+    static var savedSeries: Series? {
+        get {
+            UserDefaults.standard.data(forKey: seriesKey).flatMap { try? JSONDecoder().decode(Series.self, from: $0) }
+        }
+        set {
+            UserDefaults.standard.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: seriesKey)
+        }
+    }
 
     /// Ne déclenche pas la demande d'autorisation.
     static func isDenied() async -> Bool {
@@ -45,36 +81,43 @@ enum NotificationScheduler {
         return (filledTitle, filledBody)
     }
 
-    /// Remplace la série en cours par une notification par numéro, espacées de `interval` secondes,
-    /// la première arrivant après un intervalle. Renvoie les dates d'arrivée prévues.
-    static func schedule(numbers: [Int], every interval: TimeInterval, title: String, message: String) async -> [Date] {
+    /// Remplace la série en cours ; `refill` programme ensuite ses notifications.
+    static func start(_ series: Series) {
         center.removeAllPendingNotificationRequests()
+        savedSeries = series
+    }
 
+    /// Programme les prochaines notifications de la série sans dépasser 64 en attente.
+    /// Renvoie `true` quand toutes celles à venir sont programmées.
+    static func refill(_ series: Series) async -> Bool {
+        let pending = Set(await center.pendingNotificationRequests().map(\.identifier))
+        var free = maxPending - pending.count
         let sound = UNNotificationSound(named: UNNotificationSoundName(soundFile))
-        let start = Date()
-        var dates: [Date] = []
-        for (offset, number) in numbers.enumerated() {
-            let delay = interval * Double(offset + 1)
-            let date = start.addingTimeInterval(delay)
-            let text = fill(title: title, message: message, number: number)
+        for index in series.numbers.indices {
+            let identifier = "serie-\(series.id.uuidString)-\(index + 1)"
+            // Déjà passée ou trop proche pour qu'iOS la livre à l'heure.
+            let delay = series.date(at: index).timeIntervalSinceNow
+            guard delay > 0.2, !pending.contains(identifier) else { continue }
+            guard free > 0 else { return false }
 
+            let text = fill(title: series.title, message: series.message, number: series.numbers[index])
             let content = UNMutableNotificationContent()
             content.title = text.title
             content.body = text.body
             content.sound = sound
             content.threadIdentifier = "serie"
-            content.userInfo = [dateKey: date.timeIntervalSince1970]
 
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
-            let request = UNNotificationRequest(identifier: "serie-\(offset + 1)", content: content, trigger: trigger)
-            try? await center.add(request)
-            dates.append(date)
+            try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+            free -= 1
         }
-        return dates
+        return true
     }
 
-    static func cancelAll() {
+    /// Annule la série : les notifications pas encore arrivées ne partiront pas.
+    static func cancel() {
         center.removeAllPendingNotificationRequests()
+        savedSeries = nil
     }
 
     /// Joue dans l'app le son des notifications (muet si l'iPhone est en mode silencieux).
@@ -86,14 +129,5 @@ enum NotificationScheduler {
         AudioServicesPlaySystemSoundWithCompletion(id) {
             AudioServicesDisposeSystemSoundID(id)
         }
-    }
-
-    /// Dates des notifications encore à venir, pour retrouver la série quand l'app est rouverte.
-    static func pendingDates() async -> [Date] {
-        await center.pendingNotificationRequests()
-            .compactMap { $0.content.userInfo[dateKey] as? TimeInterval }
-            .map(Date.init(timeIntervalSince1970:))
-            .filter { $0 > .now }
-            .sorted()
     }
 }
