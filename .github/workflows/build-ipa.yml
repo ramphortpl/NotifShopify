@@ -98,8 +98,21 @@ jobs:
           pgrep -fl "NotifApp.app/NotifApp" || { echo "::error::L'app s'est arrêtée juste après son lancement"; exit 1; }
           xcrun simctl io "$UDID" screenshot apercu.png
 
+      # L'écran de l'iPad, plus haut, montre tout le formulaire. Étape facultative.
+      - name: Capture d'écran sur iPad
+        continue-on-error: true
+        run: |
+          IPAD=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad Pro' | grep -oE '[0-9A-F-]{36}') || { echo "Pas de simulateur iPad"; exit 0; }
+          xcrun simctl boot "$IPAD"
+          xcrun simctl bootstatus "$IPAD" -b
+          xcrun simctl status_bar "$IPAD" override --time 9:41 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$IPAD" build/Release-iphonesimulator/NotifApp.app
+          xcrun simctl launch "$IPAD" com.ramphortpl.notifapp
+          sleep 8
+          xcrun simctl io "$IPAD" screenshot apercu-ipad.png
+
       - uses: actions/upload-artifact@v4
         with:
           name: apercu
-          path: apercu.png
+          path: apercu*.png
           if-no-files-found: error
